@@ -90,7 +90,8 @@ services:
     image: mariadb:11.1.1-rc-jammy
     restart: on-failure
     networks:
-      - cms
+      metrics:
+      cms:
     volumes:
       - type: volume
         source: mariadb_data
@@ -136,7 +137,8 @@ services:
     links:
       - database:db
     ports:
-      - target: 80
+      - host_ip: 127.0.0.1
+        target: 80
         published: 8081
         protocol: tcp
         mode: host
@@ -184,12 +186,15 @@ services:
         read_only: true
     networks:
       - metrics
-  node-exporter:
+
+  node_exporter:
     image: prom/node-exporter
     command:
       - '--path.sysfs=/host/sys'
       - '--path.procfs=/host/proc'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+#      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
       - '--no-collector.ipvs'
     labels:
       - prometheus-job=node-exporter
@@ -208,6 +213,58 @@ services:
         read_only: true
     networks:
       - metrics
+
+  mysql_exporter:
+    image: prom/mysqld-exporter:v0.14.0
+    links:
+      - database:mysqldb
+    environment:
+      DATA_SOURCE_NAME: root:${DB_MARIA_ROOT_PASS:-justRootPass123}@(mysqldb:3306)/?charset=utf8
+    command:
+      - --collect.global_status
+      - --collect.info_schema.innodb_metrics
+      - --collect.auto_increment.columns
+      - --collect.info_schema.processlist
+      - --collect.binlog_size
+      - --collect.info_schema.tablestats
+      - --collect.global_variables
+      - --collect.info_schema.query_response_time
+      - --collect.info_schema.userstats
+      - --collect.info_schema.tables
+      - --collect.perf_schema.tablelocks
+      - --collect.perf_schema.file_events
+      - --collect.perf_schema.eventswaits
+      - --collect.perf_schema.indexiowaits
+      - --collect.perf_schema.tableiowaits
+      - --collect.slave_status
+    labels:
+      - prometheus-job=mysql-exporter
+    networks:
+      - metrics
+
+  blackbox_exporter:
+    build: ./blackboxexporter
+    command:
+      - '--config.file=/etc/blackboxexporter/config.yml'
+      - '--web.route-prefix=/blackbox'
+    restart: on-failure:3
+    ports:
+      - host_ip: 127.0.0.1
+        target: 9115
+        published: 9115
+        protocol: tcp
+        mode: host
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT}_blackbox-exporter.rule=PathPrefix(`/blackbox`)
+      - traefik.http.routers.${PROJECT}_blackbox-exporter.entrypoints=web
+      - traefik.http.routers.${PROJECT}_blackbox-exporter.priority=1500
+      - traefik.http.services.${PROJECT}_blackbox-exporter.loadbalancer.server.port=9115
+    networks:
+      metrics:
+        aliases:
+          - blackbox
+      traefik-public:
 
 ### monitoring system
   docker-api-socat:
@@ -228,11 +285,14 @@ services:
   prometheus:
     <<: *default-opts
     image: prom/prometheus:v2.44.0
-    restart: on-failure
+    restart: on-failure:3
     networks:
       - traefik-public
       - socat
       - metrics
+    links:
+      - cadvisor:cadvisor
+      - alertmanager:alertmanager
     extra_hosts:
       - "cms.example.com:127.0.0.1"
     command:
@@ -240,11 +300,17 @@ services:
       - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
       - '--web.external-url=/prometheus/'
       - '--web.route-prefix=/prometheus/'
+      # for enable reload via POST to /-/reload
+      - '--web.enable-lifecycle'
     #      - '--storage.tsdb.path=/prometheus'
     volumes:
       - type: bind
         source: prometheus/prometheus.yml
         target: /prometheus.yml
+        read_only: true
+      - type: bind
+        source: prometheus/alert.rules.yml
+        target: /alert.rules.yml
         read_only: true
       - type: volume
         source: prometheus
@@ -254,8 +320,37 @@ services:
       - traefik.enable=true
       - traefik.http.routers.${PROJECT}_prometheus.rule=PathPrefix(`/prometheus`)
       - traefik.http.routers.${PROJECT}_prometheus.entrypoints=web
-      - traefik.http.routers.${PROJECT}_prometheus.priority=1900
+      - traefik.http.routers.${PROJECT}_prometheus.priority=1800
       - traefik.http.services.${PROJECT}_prometheus.loadbalancer.server.port=9090
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    networks:
+      - traefik-public
+      - metrics
+    ports:
+      - host_ip: 127.0.0.1
+        target: 9093
+        published: 9093
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: ./alertmanager/
+        target: /etc/alertmanager/
+        read_only: false
+    restart: on-failure:3
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.route-prefix=/alertmanager'
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${PROJECT}_alertmanager.rule=PathPrefix(`/alertmanager`)
+      - traefik.http.routers.${PROJECT}_alertmanager.entrypoints=web
+      - traefik.http.routers.${PROJECT}_alertmanager.priority=2100
+      - traefik.http.services.${PROJECT}_alertmanager.loadbalancer.server.port=9093
+
 
   grafana:
     <<: *default-opts
@@ -295,7 +390,8 @@ services:
         target: /loki
         read_only: false
     ports:
-      - target: 3100
+      - host_ip: 127.0.0.1
+        target: 3100
         published: 3100
         protocol: tcp
         mode: host

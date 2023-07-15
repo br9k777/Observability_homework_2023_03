@@ -1,51 +1,12 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "7.5.5"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "piechart",
-      "name": "Pie chart v2",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -56,14 +17,18 @@
   },
   "description": "Traefik dashboard prometheus",
   "editable": true,
+  "fiscalYearStartMonth": 0,
   "gnetId": 4475,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1620932097756,
+  "id": 6,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": null,
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -71,32 +36,37 @@
         "y": 0
       },
       "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "grafana"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "$backend stats",
       "type": "row"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "${DS_PROMETHEUS}",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []
@@ -108,7 +78,6 @@
         "y": 1
       },
       "id": 2,
-      "interval": null,
       "links": [],
       "maxDataPoints": 3,
       "options": {
@@ -117,6 +86,7 @@
           "calcs": [],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "values": [
             "value",
             "percent"
@@ -130,10 +100,18 @@
           "fields": "",
           "values": false
         },
-        "text": {}
+        "text": {},
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
           "expr": "traefik_service_requests_total{service=\"$service\"}",
           "format": "time_series",
@@ -147,26 +125,43 @@
       "type": "piechart"
     },
     {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
-      "format": "ms",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "rgb(31, 120, 193)",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
@@ -175,42 +170,29 @@
         "y": 1
       },
       "id": 4,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "10.0.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
           "expr": "sum(traefik_service_request_duration_seconds_sum{service=\"$service\"}) / sum(traefik_service_requests_total{service=\"$service\"}) * 1000",
           "format": "time_series",
@@ -220,28 +202,17 @@
           "refId": "A"
         }
       ],
-      "thresholds": "",
       "title": "$service response time",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "stat"
     },
     {
       "aliasColors": {},
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -272,7 +243,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "10.0.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -282,6 +253,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
           "expr": "sum(rate(traefik_service_requests_total{service=\"$service\"}[5m]))",
           "format": "time_series",
@@ -292,9 +267,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Total requests over 5min $service",
       "tooltip": {
         "shared": true,
@@ -303,38 +276,32 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -343,6 +310,15 @@
       },
       "id": 12,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "grafana"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Global stats",
       "type": "row"
     },
@@ -351,10 +327,9 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -385,7 +360,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "10.0.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -395,6 +370,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "rate(traefik_entrypoint_requests_total{entrypoint=~\"$entrypoint\",code=\"200\"}[5m])",
           "format": "time_series",
           "intervalFactor": 2,
@@ -403,9 +382,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Status code 200 over 5min",
       "tooltip": {
         "shared": true,
@@ -414,33 +391,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -448,10 +416,9 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -482,7 +449,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.5",
+      "pluginVersion": "10.0.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -492,6 +459,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "rate(traefik_entrypoint_requests_total{entrypoint=~\"$entrypoint\",code!=\"200\"}[5m])",
           "format": "time_series",
           "intervalFactor": 2,
@@ -500,9 +471,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Others status code over 5min",
       "tooltip": {
         "shared": true,
@@ -511,38 +480,31 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "cacheTimeout": null,
-      "datasource": "${DS_PROMETHEUS}",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -554,8 +516,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -574,7 +535,6 @@
         "y": 23
       },
       "id": 7,
-      "interval": null,
       "links": [],
       "maxDataPoints": 3,
       "options": {
@@ -583,6 +543,7 @@
           "calcs": [],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "values": [
             "value"
           ]
@@ -599,6 +560,10 @@
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
           "expr": "sum(rate(traefik_service_requests_total[5m])) by (service) ",
           "format": "time_series",
@@ -612,8 +577,10 @@
       "type": "piechart"
     },
     {
-      "cacheTimeout": null,
-      "datasource": "${DS_PROMETHEUS}",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -625,8 +592,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -645,7 +611,6 @@
         "y": 23
       },
       "id": 8,
-      "interval": null,
       "links": [],
       "maxDataPoints": 3,
       "options": {
@@ -654,6 +619,7 @@
           "calcs": [],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "values": [
             "value"
           ]
@@ -670,6 +636,10 @@
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
           "expr": "sum(rate(traefik_entrypoint_requests_total{entrypoint =~ \"$entrypoint\"}[5m])) by (entrypoint) ",
           "format": "time_series",
@@ -683,7 +653,8 @@
       "type": "piechart"
     }
   ],
-  "schemaVersion": 27,
+  "refresh": "",
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
     "traefik",
@@ -692,15 +663,18 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "current": {},
-        "datasource": "${DS_PROMETHEUS}",
+        "current": {
+          "selected": false,
+          "text": "observability_hw1_grafana@docker",
+          "value": "observability_hw1_grafana@docker"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
         "definition": "label_values(service)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
-        "label": null,
         "multi": false,
         "name": "service",
         "options": [],
@@ -713,21 +687,23 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
       },
       {
-        "allValue": null,
-        "current": {},
-        "datasource": "${DS_PROMETHEUS}",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
         "definition": "",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": true,
         "name": "entrypoint",
         "options": [],
@@ -740,7 +716,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -779,5 +754,6 @@
   "timezone": "",
   "title": "Traefik",
   "uid": "qPdAviJmz",
-  "version": 10
+  "version": 1,
+  "weekStart": ""
 }
