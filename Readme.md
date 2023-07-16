@@ -27,16 +27,44 @@
 - grafana - http://127.0.0.1/grafana
 - traefik dashboard - http://127.0.0.1/dashboard/#/
 - php admin для обращения к базе cms - http://127.0.0.1/database/
+- prometheus - http://127.0.0.1/blackbox
+- prometheus - http://127.0.0.1/alertmanager
 
 ## exporters
 - cadvisor для сбора метрик о контейнерах
 - node-exporter для сбора метрик о сервер
 - traefik для сбора метрик об обращениях к серверу
-
+- mysql-exporter для сбора метрик базы mysql
+- blackbox-exporter для проверки доступности компонентов системы
 
 ## пароли 
  Все пароли в Makefile, пременными в самом начале.
  (Для grafana `admin:hm1_grafana_pass`)
+
+## результат
+- сбор части метрик настроен через `docker_sd_configs` через лейблы на контейнерах.  
+  Это удобно так как достаточно редактировать только compose файл.   
+  Но работает только при работе обектами сверисов в k8s или swarm - если контейнер падает, prometheus 
+  сам убирает job на него, и по функции `up` не удастся понять, что сбор метрик зафейлился.  
+- в alertmanager настроены два receivers `./homework/wordpress-compose/alertmanager/config.yml` :
+  - `telegram` - для алертов котоыре могут свенить статус на resolved
+  - `telegram_without_resolve` - для алертов которы не могут сменить статус  
+    (например `compose_service_down` - может зафиксировать только факт падения контейнера) 
+- настроен alert rules в prometheus - `./homework/wordpress-compose/prometheus/alert.rules.yml` 
+  - site_down -  оповещение когда один из портов проверяемых через blackbox не прошел проверку
+  - BlackboxSlowProbe - медленный http ответ от компонента
+  - BlackboxProbeHttpFailure - не корректный http ответ от компонента
+  - service_down - когда не удалось получить метрики
+
+### проверка оповещения
+Остановливаем один из компонентов:
+- `docker compose stop loki`
+- `docker compose stop pma`
+
+Смотрим резлуьтат в [prometheus](http://127.0.0.1/prometheus/alerts?search=)
+и [alertmanager](http://127.0.0.1/alertmanager/#/alerts)    
+Так же должна приходить нотификцаия в чат [Otus_home_works_notify](https://t.me/+5WJ6QCTIjWdiZTYy)
+
 
 # Домашка 2 для Otus
 ## Задача
@@ -51,7 +79,7 @@
 ## отошел от задач
   - Чтобы не мапить кучу папкок билже grafana со всем необходимыми дшбордами, в будующем правильнее иметь собранный образщ со всем что нужно и использовать его на продакшене
   - Так же сложил дашборды в одну папку не вижу смысла их раскладывать в разные
-  - Дашборды сам не делал взял из [готовых](https://grafana.com/grafana/dashboards)
+  - Дашборды взял из [готовых](https://grafana.com/grafana/dashboards)
 
 ## результат 
 скрины в Observability_homework_2023_03/homework/GAP2

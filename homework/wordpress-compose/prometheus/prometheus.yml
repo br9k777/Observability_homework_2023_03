@@ -22,6 +22,51 @@ scrape_configs:
     static_configs:
       - targets: ['blackbox:9115']
 
+  - job_name: 'blackbox'
+    metrics_path: '/blackbox/probe'
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://cms.example.com
+        - http://cms.example.com/database
+        - http://cms.example.com/grafana
+        - http://cms.example.com/prometheus
+        - http://cms.example.com/alertmanager
+        - http://cms.example.com/dashboard/#/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: 'blackbox_tcp'
+    metrics_path: '/blackbox/probe'
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - nginx:80
+        - docker-api-socat:2375
+        - cadvisor:8080
+        - database:3306
+        - grafana:3000
+        - loki:3100
+        - mysql_exporter:9104
+        - node_exporter:9100
+        - pma:8081
+        - reverse-proxy:80
+        - wordpress:9000
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
   - job_name: traefik
     static_configs:
       - targets: [ 'traefik:8082' ]
@@ -44,16 +89,6 @@ scrape_configs:
       - regex: __meta_docker_container_label_prometheus_(.+)
         action: labelmap
         replacement: $1
-
-  - job_name: 'blackbox'
-    metrics_path: blackbox/probe
-    params:
-      module: [ http_2xx ]
-    static_configs:
-      - targets:
-          - cms.example.com
-#          - 127.0.0.1/database
-#          - google.com
 
 alerting:
   alertmanagers:

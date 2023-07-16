@@ -248,12 +248,15 @@ services:
       - '--config.file=/etc/blackboxexporter/config.yml'
       - '--web.route-prefix=/blackbox'
     restart: on-failure:3
-    ports:
-      - host_ip: 127.0.0.1
-        target: 9115
-        published: 9115
-        protocol: tcp
-        mode: host
+#     ports:
+#       - host_ip: 127.0.0.1
+#         target: 9115
+#         published: 9115
+#         protocol: tcp
+#         mode: host
+    extra_hosts:
+     - "cms.example.com:${NODE_LOCAL_IP:-172.18.0.1}"
+     - "inner.name.example.com:${NODE_LOCAL_IP:-172.18.0.1}"
     labels:
       - traefik.enable=true
       - traefik.http.routers.${PROJECT}_blackbox-exporter.rule=PathPrefix(`/blackbox`)
@@ -261,6 +264,8 @@ services:
       - traefik.http.routers.${PROJECT}_blackbox-exporter.priority=1500
       - traefik.http.services.${PROJECT}_blackbox-exporter.loadbalancer.server.port=9115
     networks:
+      socat:
+      cms:
       metrics:
         aliases:
           - blackbox
@@ -328,12 +333,12 @@ services:
     networks:
       - traefik-public
       - metrics
-    ports:
-      - host_ip: 127.0.0.1
-        target: 9093
-        published: 9093
-        protocol: tcp
-        mode: host
+#     ports:
+#       - host_ip: 127.0.0.1
+#         target: 9093
+#         published: 9093
+#         protocol: tcp
+#         mode: host
     volumes:
       - type: bind
         source: ./alertmanager/
