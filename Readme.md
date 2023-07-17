@@ -83,7 +83,6 @@
 
 ## результат 
 скрины в Observability_homework_2023_03/homework/GAP2
-blackbox exporter пока не успел настроить
 
 # Домашка 3 для Otus
 ## Задача
