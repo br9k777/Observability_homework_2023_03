@@ -1,0 +1,23 @@
+{{ define "__text_alert_list_markdown_custom" }}
+{{ range . }} <b>Labels</b>:
+{{ range .Labels.SortedPairs }}  <b>{{ .Name }}</b> : <code>{{ .Value }}</code>
+{{ end }}<b>Annotations</b>:
+{{ range .Annotations.SortedPairs }}  <b>{{ .Name }}</b> : {{ .Value }}
+{{ end }}<b>Source</b>: {{ .GeneratorURL }}{{ end }}
+{{ end }}
+
+{{ define "telegram.custom.message" }}
+{{ if gt (len .Alerts.Firing) 0 }}
+🔴 <b>Аварийная ситуация</b>:{{ template "__text_alert_list_markdown_custom" .Alerts.Firing }}
+{{ end }}
+{{ if gt (len .Alerts.Resolved) 0 }}
+🟢 <b>Возвращение в норму</b>:{{ template "__text_alert_list_markdown_custom" .Alerts.Resolved }}
+{{ end }}
+{{ end }}
+
+
+{{ define "telegram.telegram_notify.message" }}
+{{ if gt (len .Alerts.Firing) 0 }}
+🟡 <b>Предупреждение</b>:{{ template "__text_alert_list_markdown_custom" .Alerts.Firing }}
+{{ end }}
+{{ end }}

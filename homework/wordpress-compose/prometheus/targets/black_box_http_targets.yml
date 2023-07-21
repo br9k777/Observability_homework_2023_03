@@ -1,0 +1,9 @@
+- targets:
+    - http://cms.example.com
+    - http://inner.name.example.com/database/
+    - http://inner.name.example.com/grafana
+    - http://inner.name.example.com/prometheus
+    - http://inner.name.example.com/alertmanager
+    - http://inner.name.example.com/dashboard/#/
+  labels:
+    "probe_type": "https"

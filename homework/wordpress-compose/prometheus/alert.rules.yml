@@ -9,7 +9,7 @@ groups:
       severity: notify
     annotations:
       summary: Container killed (service {{ $labels.container_label_com_docker_compose_service }})
-      description: "A container has disappeared for service {{ $labels.container_label_com_docker_compose_service }}\n Last seen {{ $value }}s ago\n"
+      description: "A container has disappeared for service {{ $labels.container_label_com_docker_compose_service }}. Last seen {{ $value }}s ago"
   - alert: service_down
     expr: up == 0
     for: 30s

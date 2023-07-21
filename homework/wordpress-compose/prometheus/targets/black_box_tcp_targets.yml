@@ -1,0 +1,14 @@
+- targets:
+    - nginx:80
+#     - docker-api-socat:2375
+    - cadvisor:8080
+    - database:3306
+    - grafana:3000
+    - loki:3100
+    - mysql_exporter:9104
+    - node_exporter:9100
+    - pma:80
+    - reverse-proxy:80
+    - wordpress:9000
+  labels:
+    "probe_type": "tcp"

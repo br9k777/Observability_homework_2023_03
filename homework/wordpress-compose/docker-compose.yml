@@ -264,11 +264,9 @@ services:
       - traefik.http.routers.${PROJECT}_blackbox-exporter.priority=1500
       - traefik.http.services.${PROJECT}_blackbox-exporter.loadbalancer.server.port=9115
     networks:
-      socat:
       cms:
-      metrics:
-        aliases:
-          - blackbox
+      metrics :
+        aliases : [ "blackbox" ]
       traefik-public:
 
 ### monitoring system
@@ -295,13 +293,10 @@ services:
       - traefik-public
       - socat
       - metrics
-    links:
-      - cadvisor:cadvisor
-      - alertmanager:alertmanager
     extra_hosts:
       - "cms.example.com:127.0.0.1"
     command:
-      - '--config.file=/prometheus.yml'
+      - '--config.file=/config/prometheus.yml'
       - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
       - '--web.external-url=/prometheus/'
       - '--web.route-prefix=/prometheus/'
@@ -310,12 +305,8 @@ services:
     #      - '--storage.tsdb.path=/prometheus'
     volumes:
       - type: bind
-        source: prometheus/prometheus.yml
-        target: /prometheus.yml
-        read_only: true
-      - type: bind
-        source: prometheus/alert.rules.yml
-        target: /alert.rules.yml
+        source: prometheus
+        target: /config
         read_only: true
       - type: volume
         source: prometheus
