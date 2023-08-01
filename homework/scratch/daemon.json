@@ -1,0 +1,9 @@
+{
+  "log-driver": "json-file",
+  "log=opts": {
+    "max-size": "2G",
+    "max-file": 5,
+    "labels": "cluster_output",
+    "env": "os,customer"
+  }
+}

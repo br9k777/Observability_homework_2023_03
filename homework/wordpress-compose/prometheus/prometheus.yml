@@ -59,15 +59,19 @@ scrape_configs:
           alias: reverse-proxy
 
   - job_name: 'common'
-    docker_sd_configs:
-      - host: tcp://docker-api-socat:2375
+    dockerswarm_sd_configs:
+      - host: tcp://tasks.docker-api-socat:2375
+        role: tasks
     relabel_configs:
+      - source_labels: [ __meta_dockerswarm_task_desired_state ]
+        regex: running
+        action: keep
       # Only keep containers that have a `prometheus-job` label.
-      - source_labels: [ __meta_docker_container_label_prometheus_job ]
+      - source_labels: [ __meta_dockerswarm_service_label_prometheus_job ]
         regex: .+
         action: keep
       # Only with prometheus network
-      - source_labels: [ __meta_docker_network_name ]
+      - source_labels: [ __meta_dockerswarm_network_name ]
         regex: metrics
         action: keep
       # Use the task labels that are prefixed by `prometheus-`.

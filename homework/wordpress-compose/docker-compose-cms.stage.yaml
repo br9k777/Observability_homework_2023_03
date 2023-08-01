@@ -1,0 +1,139 @@
+version: '3.9'
+
+networks:
+  traefik-public:
+    external: true
+    name: ${PROJECT}_traefik-public
+  socat:
+    external: true
+    name: ${PROJECT}_socat
+
+volumes:
+  elastic_data:
+    driver: local
+    name: ${PROJECT}_elastic_efk
+
+x-default-opts:
+  &default-opts
+  logging:
+    driver: loki
+    options:
+      loki-url: "http://127.0.0.1:3100/loki/api/v1/push"
+      loki-retries: "5"
+      loki-batch-size: "400"
+      loki-external-labels: "project=${PROJECT}"
+      max-size: 5g
+      max-file: 2
+
+services:
+  ### cms components
+  nginx:
+    <<: *default-opts
+    image: nginx:1.25.1
+    restart: on-failure
+    networks:
+      - traefik-public
+      - cms
+    volumes:
+      - type: bind
+        source: ./nginx
+        target: /etc/nginx/conf.d
+        read_only: false
+      - type: volume
+        source: wordpress_html_data
+        target: /var/www/html
+        read_only: false
+    #    ports:
+    #      - target: 80
+    #        published: 8080
+    #        protocol: tcp
+    #        mode: host
+    links:
+      - wordpress
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.${PROJECT}_nginx.rule=Host(`cms.example.com`)
+        - traefik.http.routers.${PROJECT}_nginx.entrypoints=web
+        - traefik.http.routers.${PROJECT}_nginx.priority=100
+        - traefik.http.services.${PROJECT}_nginx.loadbalancer.server.port=80
+
+
+  database:
+    <<: *default-opts
+    image: mariadb:11.1.1-rc-jammy
+    restart: on-failure
+    networks:
+      metrics:
+      cms:
+    volumes:
+      - type: volume
+        source: mariadb_data
+        target: /var/lib/mysql
+        read_only: false
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_MARIA_ROOT_PASS:-justRootPass123}
+      MYSQL_DATABASE: db_wordpress
+      MYSQL_USER: ${DB_MARIA_USER_LOGIN:-db_user}
+      MYSQL_PASSWORD: ${DB_MARIA_USER_PASS:-justUserPass321}
+    deploy:
+      mode: replicated
+
+  wordpress:
+    <<: *default-opts
+    image: wordpress:php7.4-fpm-alpine
+    restart: on-failure
+    networks:
+      - cms
+    volumes:
+      - type: volume
+        source: wordpress_html_data
+        target: /var/www/html
+        read_only: false
+    depends_on:
+      - database
+    environment:
+      WORDPRESS_DB_HOST: database
+      MYSQL_ROOT_PASSWORD: ${DB_MARIA_ROOT_PASS:-justRootPass123}
+      WORDPRESS_DB_NAME: db_wordpress
+      WORDPRESS_DB_USER: ${DB_MARIA_USER_LOGIN:-db_user}
+      WORDPRESS_DB_PASSWORD: ${DB_MARIA_USER_PASS:-justUserPass321}
+      WORDPRESS_TABLE_PREFIX: wp_
+    deploy:
+      mode: replicated
+
+  pma:
+    <<: *default-opts
+    image: phpmyadmin/phpmyadmin:latest
+    restart: on-failure
+    networks:
+      - traefik-public
+      - cms
+    links:
+      - database:db
+    ports:
+      - host_ip: 127.0.0.1
+        target: 80
+        published: 8081
+        protocol: tcp
+        mode: host
+    environment:
+      PMA_HOST: database
+      MYSQL_USERNAME: root
+      MYSQL_ROOT_PASSWORD: ${DB_MARIA_ROOT_PASS:-justRootPass123}
+      PMA_ABSOLUTE_URI: http://127.0.0.1/database
+    deploy:
+      mode: replicated
+      labels:
+        - traefik.enable=true
+        - traefik.http.middlewares.${PROJECT}_adminer_strip_prefix.stripprefix.prefixes=/database,/database/
+        - traefik.http.middlewares.${PROJECT}_adminer_strip_prefix.stripprefix.forceSlash=false
+        - traefik.http.routers.${PROJECT}_adminer.middlewares=${PROJECT}_adminer_strip_prefix
+        - traefik.http.routers.${PROJECT}_adminer.rule=PathPrefix(`/database`)
+        - traefik.http.routers.${PROJECT}_adminer.entrypoints=web
+        - traefik.http.routers.${PROJECT}_adminer.priority=1900
+        - traefik.http.services.${PROJECT}_adminer.loadbalancer.server.port=80
+
+
+
+

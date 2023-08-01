@@ -1,0 +1,148 @@
+version: '3.9'
+
+networks:
+  traefik-public:
+    external: true
+    name: ${PROJECT}_traefik-public
+  default:
+    external: true
+    name: ${PROJECT}_efk
+
+configs:
+  fluent-bit:
+    file: ./efk/fluent-bit/fluent-bit.conf
+    name: ${PROJECT}_fluent-bit
+
+volumes:
+  elastic_data:
+    driver: local
+    name: ${PROJECT}_elastic_efk
+  loki-data:
+    driver: local
+    name: ${PROJECT}_loki
+
+services:
+  elasticsearch-efk:
+    image: elasticsearch:8.8.1
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=efk-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx4g"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - type: volume
+        source: elastic_data
+        target: /usr/share/elasticsearch/data
+        read_only: false
+    networks:
+      default:
+      traefik-public:
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.middlewares.${PROJECT}_stripprefix_elasticsearch_efk.stripprefix.prefixes=/elasticsearch,/elasticsearch/
+        - traefik.http.routers.${PROJECT}_elasticsearch_efk.rule=PathPrefix(`/elasticsearch`)
+        - traefik.http.routers.${PROJECT}_elasticsearch_efk.entrypoints=web
+        - traefik.http.routers.${PROJECT}_elasticsearch_efk.middlewares=${PROJECT}_stripprefix_elasticsearch_efk@docker
+        - traefik.http.services.${PROJECT}_elasticsearch_efk.loadbalancer.server.port=9200
+      mode: replicated
+      replicas: 1
+#      placement:
+#        constraints: [node.labels.rigspace-elasticsearch == true]
+
+  kibana-efk:
+    image: kibana:8.8.1
+    depends_on:
+      - elasticsearch-efk
+    environment:
+      SERVER_NAME: ${DOMAIN_NAME:-127.0.0.1}
+      ELASTICSEARCH_URL: http://elasticsearch-efk:9200
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch-efk:9200"]'
+      SERVER_BASEPATH: '/efkkibana'
+      SERVER_REWRITEBASEPATH: 'true'
+      SERVER_PUBLICBASEURL: http://${DOMAIN_NAME:-127.0.0.1}/efkkibana
+    #      ELASTICSEARCH_USERNAME: elastic
+    #      ELASTICSEARCH_PASSWORD: password
+#    ports:
+#      - target: 5601
+#        published: 5601
+#        protocol: tcp
+#        mode: host
+    networks:
+      default:
+        aliases:
+          - kibana
+      traefik-public:
+    deploy:
+      labels:
+        - traefik.enable=true
+#        - traefik.http.middlewares.${PROJECT}_stripprefix_kibana_efk.stripprefix.prefixes=/efkkibana,/efkkibana/
+#        - traefik.http.routers.${PROJECT}_kibana_efk.middlewares=${PROJECT}_stripprefix_kibana_efk@docker
+        - traefik.http.routers.${PROJECT}_kibana_efk.rule=PathPrefix(`/efkkibana`)
+        - traefik.http.routers.${PROJECT}_kibana_efk.entrypoints=web
+        - traefik.http.services.${PROJECT}_kibana_efk.loadbalancer.server.port=5601
+      mode: replicated
+      replicas: 1
+#      placement:
+#        constraints: [ node.labels.rigspace-elasticsearch == true ]
+
+  fluent-bit:
+    image: fluent/fluent-bit:2.1.8
+    ports:
+      # необходимо открыть порты, которые используются плагином forward
+      - target: 24224
+        published: 24224
+        protocol: tcp
+        mode: host
+      - target: 24224
+        published: 24224
+        protocol: udp
+        mode: host
+    configs:
+      - source: fluent-bit
+        target: /fluent-bit/etc/fluent-bit.conf
+    depends_on:
+      - elasticsearch-efk
+      - loki
+#    volumes:
+#      - type: bind
+#        source: ./efk/fluent-bit/fluent-bit.conf
+#        target: /fluent-bit/etc/fluent-bit.conf
+#        read_only: true
+    networks:
+      - default
+    deploy:
+      mode: global
+
+  loki:
+    image: grafana/loki:2.8.2
+    networks:
+      - default
+      - traefik-public
+    volumes:
+      - type: volume
+        source: loki-data
+        target: /loki
+        read_only: false
+    ports:
+      - target: 3100
+        published: 3100
+        protocol: tcp
+        mode: host
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.${PROJECT}_loki.rule=PathPrefix(`/loki`)
+        - traefik.http.routers.${PROJECT}_loki.entrypoints=web
+        - traefik.http.services.${PROJECT}_loki.loadbalancer.server.port=3100

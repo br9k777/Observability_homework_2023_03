@@ -1,0 +1,255 @@
+version: '3.9'
+
+networks:
+  traefik-public:
+    external: true
+    name: ${PROJECT}_traefik-public
+  cms:
+    external: true
+    name: ${PROJECT}_cms
+  metrics:
+    external: true
+    name: ${PROJECT}_metrics
+  socat:
+    external: true
+    name: ${PROJECT}_socat
+
+volumes:
+  prometheus:
+    name: ${PROJECT}_prometheus
+    driver: local
+  grafana:
+    name: ${PROJECT}_grafana
+    driver: local
+
+services:
+  ### exporters
+
+#  cadvisor:
+#    image: gcr.io/cadvisor/cadvisor
+#    command: -logtostderr -docker_only
+#    labels:
+#      - prometheus-job=cadvisor
+#    volumes:
+#      - type: bind
+#        source: /
+#        target: /rootfs
+#        read_only: true
+#      - type: bind
+#        source: /var/run
+#        target: /var/run
+#        read_only: false
+#      - type: bind
+#        source: /sys
+#        target: /sys
+#        read_only: true
+#      - type: bind
+#        source: /var/lib/docker
+#        target: /var/lib/docker
+#        read_only: true
+#      - type: bind
+#        source: /dev/disk
+#        target: /dev/disk
+#        read_only: true
+#    networks:
+#      - metrics
+#    deploy:
+#      mode: global
+#
+#  node_exporter:
+#    image: prom/node-exporter
+#    command:
+#      - '--path.sysfs=/host/sys'
+#      - '--path.procfs=/host/proc'
+#      - --collector.filesystem.ignored-mount-points
+#      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+#      #      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+#      - '--no-collector.ipvs'
+#    labels:
+#      - prometheus-job=node-exporter
+#    volumes:
+#      - type: bind
+#        source: /
+#        target: /rootfs
+#        read_only: true
+#      - type: bind
+#        source: /proc
+#        target: /host/proc
+#        read_only: true
+#      - type: bind
+#        source: /sys
+#        target: /host/sys
+#        read_only: true
+#    networks:
+#      - metrics
+#    deploy:
+#      mode: global
+#
+#  mysql_exporter:
+#    image: prom/mysqld-exporter:v0.14.0
+#    environment:
+#      DATA_SOURCE_NAME: root:${DB_MARIA_ROOT_PASS:-justRootPass123}@(database:3306)/?charset=utf8
+#    command:
+#      - --collect.global_status
+#      - --collect.info_schema.innodb_metrics
+#      - --collect.auto_increment.columns
+#      - --collect.info_schema.processlist
+#      - --collect.binlog_size
+#      - --collect.info_schema.tablestats
+#      - --collect.global_variables
+#      - --collect.info_schema.query_response_time
+#      - --collect.info_schema.userstats
+#      - --collect.info_schema.tables
+#      - --collect.perf_schema.tablelocks
+#      - --collect.perf_schema.file_events
+#      - --collect.perf_schema.eventswaits
+#      - --collect.perf_schema.indexiowaits
+#      - --collect.perf_schema.tableiowaits
+#      - --collect.slave_status
+#    networks:
+#      - metrics
+#    deploy:
+#      mode: replicated
+#      labels:
+#        - prometheus-job=mysql-exporter
+#
+#
+#  blackbox_exporter:
+#    image: ${PROJECT}-blackbox_exporter:latest
+#    command:
+#      - '--config.file=/etc/blackbox_exporter/config.yml'
+#      - '--web.route-prefix=/blackbox'
+#    #     ports:
+#    #       - host_ip: 127.0.0.1
+#    #         target: 9115
+#    #         published: 9115
+#    #         protocol: tcp
+#    #         mode: host
+#    extra_hosts:
+#      - "cms.example.com:${NODE_LOCAL_IP:-172.18.0.1}"
+#      - "inner.name.example.com:${NODE_LOCAL_IP:-172.18.0.1}"
+#    networks:
+#      cms:
+#      metrics:
+#        aliases: [ "blackbox" ]
+#      traefik-public:
+#    deploy:
+#      restart_policy:
+#        condition: on-failure
+#        delay: 10s
+#        max_attempts: 3
+#        window: 60s
+#      labels:
+#        - traefik.enable=true
+#        - traefik.http.routers.${PROJECT}_blackbox-exporter.rule=PathPrefix(`/blackbox`)
+#        - traefik.http.routers.${PROJECT}_blackbox-exporter.entrypoints=web
+#        - traefik.http.routers.${PROJECT}_blackbox-exporter.priority=1500
+#        - traefik.http.services.${PROJECT}_blackbox-exporter.loadbalancer.server.port=9115
+
+### monitoring system
+#  prometheus:
+##    <<: *default-opts
+#    image: prom/prometheus:v2.44.0
+#    networks:
+#      - traefik-public
+#      - socat
+#      - metrics
+#    extra_hosts:
+#      - "cms.example.com:127.0.0.1"
+#    command:
+#      - '--config.file=/config/prometheus.yml'
+#      - '--storage.tsdb.retention=${PROMETHEUS_RETENTION:-24h}'
+#      - '--web.external-url=/prometheus/'
+#      - '--web.route-prefix=/prometheus/'
+#      # for enable reload via POST to /-/reload
+#      - '--web.enable-lifecycle'
+#    #      - '--storage.tsdb.path=/prometheus'
+#    volumes:
+#      - type: bind
+#        source: prometheus
+#        target: /config
+#        read_only: true
+#      - type: volume
+#        source: prometheus
+#        target: /prometheus
+#        read_only: false
+#    deploy:
+#      restart_policy:
+#        condition: on-failure
+#        delay: 10s
+#        max_attempts: 3
+#        window: 60s
+#      labels:
+#        - traefik.enable=true
+#        - traefik.http.routers.${PROJECT}_prometheus.rule=PathPrefix(`/prometheus`)
+#        - traefik.http.routers.${PROJECT}_prometheus.entrypoints=web
+#        - traefik.http.routers.${PROJECT}_prometheus.priority=1800
+#        - traefik.http.services.${PROJECT}_prometheus.loadbalancer.server.port=9090
+
+#  alertmanager:
+#    image: prom/alertmanager:latest
+#    networks:
+#      - traefik-public
+#      - metrics
+#    #     ports:
+#    #       - host_ip: 127.0.0.1
+#    #         target: 9093
+#    #         published: 9093
+#    #         protocol: tcp
+#    #         mode: host
+#    volumes:
+#      - type: bind
+#        source: ./alertmanager/
+#        target: /etc/alertmanager/
+#        read_only: false
+#    command:
+#      - '--config.file=/etc/alertmanager/config.yml'
+#      - '--storage.path=/alertmanager'
+#      - '--web.route-prefix=/alertmanager'
+#    deploy:
+#      restart_policy:
+#        condition: on-failure
+#        delay: 10s
+#        max_attempts: 3
+#        window: 60s
+#      labels:
+#        - traefik.enable=true
+#        - traefik.http.routers.${PROJECT}_alertmanager.rule=PathPrefix(`/alertmanager`)
+#        - traefik.http.routers.${PROJECT}_alertmanager.entrypoints=web
+#        - traefik.http.routers.${PROJECT}_alertmanager.priority=2100
+#        - traefik.http.services.${PROJECT}_alertmanager.loadbalancer.server.port=9093
+
+
+  grafana:
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: grafana
+    image: ${PROJECT}-grafana:latest
+    networks:
+      traefik-public:
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-grafana_pass_123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN_NAME:-127.0.0.1}
+      - GF_SERVER_ROOT_URL=http://${GRAFANA_DOMAIN_NAME:-127.0.0.1}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - type: volume
+        source: grafana
+        target: /var/lib/grafana
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.${PROJECT}_grafana.rule=PathPrefix(`/grafana`)
+        - traefik.http.routers.${PROJECT}_grafana.entrypoints=web
+        - traefik.http.routers.${PROJECT}_grafana.priority=1900
+        - traefik.http.services.${PROJECT}_grafana.loadbalancer.server.port=3000
+

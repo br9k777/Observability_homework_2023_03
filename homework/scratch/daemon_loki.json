@@ -1,0 +1,13 @@
+{
+  "log-driver": "loki",
+  "log=opts": {
+    "max-size": "2G",
+    "max-file": 5,
+    "labels": "cluster_output",
+    "loki-url": "http://172.18.0.1:3100/loki/api/v1/push",
+    "loki-retries": "5",
+    "loki-batch-size": "400",
+    "loki-external-labels": "log=standard",
+    "env": "os,customer"
+  }
+}
